@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>삼법형 레이더</title>
+<meta name="theme-color" content="#12151B">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F5F6F8; --surface:#FFFFFF; --surface2:#EEF0F4;
+  --ink:#191D26; --muted:#69707E; --line:#E2E5EB;
+  --up:#D9403E; --down:#3665D8; --doji:#8B93A5;
+  --teal:#2E8B74; --teal-bg:rgba(46,139,116,.10);
+  --shadow:0 1px 3px rgba(20,24,34,.06);
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#12151B; --surface:#1A1E27; --surface2:#232835;
+    --ink:#E8EAF0; --muted:#8B93A5; --line:#2A2F3B;
+    --up:#F26D6B; --down:#6E97F5; --doji:#77808F;
+    --teal:#4CBFA0; --teal-bg:rgba(76,191,160,.12);
+    --shadow:0 1px 3px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans KR",-apple-system,"Malgun Gothic",sans-serif;
+  font-size:15px; line-height:1.5; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:640px; margin:0 auto; padding:0 14px 56px}
+.mono{font-family:"IBM Plex Mono","IBM Plex Sans KR",monospace}
+.num{font-variant-numeric:tabular-nums}
+
+header{
+  position:sticky; top:0; z-index:10;
+  background:var(--bg); border-bottom:1px solid var(--line);
+}
+.bar{max-width:640px; margin:0 auto; padding:12px 14px 10px;
+  display:flex; align-items:center; justify-content:space-between; gap:8px}
+h1{font-size:17px; font-weight:700; margin:0; letter-spacing:-.01em}
+h1 small{display:block; font-size:11px; font-weight:400; color:var(--muted); letter-spacing:.04em}
+.datenav{display:flex; align-items:center; gap:2px}
+.datenav button{
+  background:var(--surface); border:1px solid var(--line); color:var(--ink);
+  width:32px; height:32px; border-radius:8px; font-size:15px; cursor:pointer;
+}
+.datenav button:disabled{opacity:.3; cursor:default}
+.datenav button:focus-visible{outline:2px solid var(--teal); outline-offset:1px}
+#dateLabel{font-weight:500; padding:0 8px; white-space:nowrap; font-size:14px}
+
+.stats{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 0 6px}
+.stat{background:var(--surface); border:1px solid var(--line); border-radius:12px;
+  padding:10px 12px; box-shadow:var(--shadow)}
+.stat .k{font-size:11px; color:var(--muted); letter-spacing:.03em}
+.stat .v{font-size:24px; font-weight:700; line-height:1.2}
+.meta{font-size:12px; color:var(--muted); margin:4px 2px 0}
+
+.filterrow{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:12px 2px 2px}
+.seg{display:flex; background:var(--surface2); border-radius:10px; padding:3px; gap:2px}
+.seg button{
+  border:0; background:transparent; color:var(--muted); font:inherit; font-size:13px;
+  padding:5px 14px; border-radius:8px; cursor:pointer; font-weight:500;
+}
+.seg button[aria-pressed="true"]{background:var(--surface); color:var(--ink); font-weight:700; box-shadow:var(--shadow)}
+.seg button:focus-visible{outline:2px solid var(--teal); outline-offset:1px}
+.toggle{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted); cursor:pointer; user-select:none}
+.toggle input{accent-color:var(--teal); width:16px; height:16px}
+
+section{margin-top:18px}
+.sechead{display:flex; align-items:baseline; gap:8px; margin:0 2px 8px}
+.sechead h2{font-size:14px; font-weight:700; margin:0}
+.sechead .cnt{font-size:13px; color:var(--muted)}
+.sechead .desc{font-size:12px; color:var(--muted); margin-left:auto; text-align:right}
+
+.cards{display:flex; flex-direction:column; gap:8px}
+.card{
+  background:var(--surface); border:1px solid var(--line); border-radius:14px;
+  padding:12px 14px; box-shadow:var(--shadow);
+  display:grid; grid-template-columns:1fr auto; gap:4px 12px; align-items:center;
+}
+.ident{display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0}
+.nm{font-weight:700; font-size:15px; color:var(--ink); text-decoration:none; border-bottom:1px solid var(--line)}
+.nm:active,.nm:hover{border-bottom-color:var(--muted)}
+.nm:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
+.code{font-size:12px; color:var(--muted)}
+.chip{font-size:10.5px; padding:1.5px 7px; border-radius:99px; background:var(--surface2); color:var(--muted); letter-spacing:.02em}
+.chip.ma{background:var(--teal-bg); color:var(--teal); font-weight:500}
+.price{text-align:right; grid-row:span 2; display:flex; flex-direction:column; align-items:flex-end; gap:2px}
+.close{font-size:17px; font-weight:700}
+.chg{font-size:13px; font-weight:500}
+.chg.up{color:var(--up)} .chg.down{color:var(--down)} .chg.flat{color:var(--muted)}
+.sub{display:flex; align-items:center; gap:10px; min-width:0}
+.candles{flex:none}
+.foot{font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+.empty{
+  background:var(--surface); border:1px dashed var(--line); border-radius:14px;
+  padding:22px 16px; text-align:center; color:var(--muted); font-size:13.5px;
+}
+.note{font-size:12px; color:var(--muted); margin-top:26px; padding-top:12px; border-top:1px solid var(--line)}
+.note p{margin:4px 0}
+#loading{padding:40px 0; text-align:center; color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <h1>삼법형 레이더<small>코스피 · 코스닥 전종목</small></h1>
+    <div class="datenav">
+      <button id="prevBtn" aria-label="이전 영업일" disabled>‹</button>
+      <span id="dateLabel" class="num">—</span>
+      <button id="nextBtn" aria-label="다음 영업일" disabled>›</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="loading">불러오는 중…</div>
+  <div id="app" hidden>
+    <div class="stats">
+      <div class="stat"><div class="k">완성형</div><div class="v num" id="cntA">0</div></div>
+      <div class="stat"><div class="k">돌파 대기</div><div class="v num" id="cntN">0</div></div>
+      <div class="stat"><div class="k">3음봉 진행</div><div class="v num" id="cntB">0</div></div>
+    </div>
+    <div class="meta" id="metaLine"></div>
+    <div class="filterrow">
+      <div class="seg" role="group" aria-label="시장 선택">
+        <button data-mkt="ALL" aria-pressed="true">전체</button>
+        <button data-mkt="KOSPI" aria-pressed="false">코스피</button>
+        <button data-mkt="KOSDAQ" aria-pressed="false">코스닥</button>
+      </div>
+      <label class="toggle"><input type="checkbox" id="maOnly"> 20일선 위만</label>
+    </div>
+    <section>
+      <div class="sechead"><h2>완성형</h2><span class="cnt num" id="cA"></span><span class="desc">오늘 양봉이 첫 양봉 종가 돌파</span></div>
+      <div class="cards" id="secA"></div>
+    </section>
+    <section>
+      <div class="sechead"><h2>돌파 대기</h2><span class="cnt num" id="cN"></span><span class="desc">모양 완성 · 돌파만 미달</span></div>
+      <div class="cards" id="secN"></div>
+    </section>
+    <section>
+      <div class="sechead"><h2>3음봉 진행형</h2><span class="cnt num" id="cB"></span><span class="desc">내일 장대양봉 시 완성</span></div>
+      <div class="cards" id="secB"></div>
+    </section>
+    <div class="note">
+      <p><b>기준</b> — 첫 봉: 몸통 1.5% 이상 양봉 · 중간 3봉: 첫 양봉보다 작은 음봉, 종가 하락 흐름, 첫 양봉 범위 내 지지 · 완성: 당일 양봉 종가가 첫 양봉 종가 상회.</p>
+      <p>평일 장 마감 후 자동 갱신됩니다. 과거 시세 기반 패턴 검색 결과이며 투자 권유가 아닙니다.</p>
+    </div>
+  </div>
+  <div id="unavail" class="empty" hidden></div>
+</div>
+
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  }
+
+  let dates = [];       // 최신순 날짜 목록
+  let idx = 0;
+  let mktFilter = "ALL";
+  let cur = null;       // 현재 표시 중인 doc
+  const cache = new Map();
+
+  function fmtDate(d){ return d.slice(0,4)+"."+d.slice(4,6)+"."+d.slice(6,8); }
+  function fmtWon(v){ return Math.round(v).toLocaleString("ko-KR"); }
+  function fmtCap(억){ return 억 >= 10000 ? (억/10000).toFixed(1).replace(/\.0$/,"")+"조" : 억.toLocaleString("ko-KR")+"억"; }
+  function fmtVol(v){
+    if(v >= 1e8) return (v/1e8).toFixed(1)+"억주";
+    if(v >= 1e4) return Math.round(v/1e4).toLocaleString("ko-KR")+"만주";
+    return v.toLocaleString("ko-KR")+"주";
+  }
+
+  function candleSVG(candles){
+    const W=96, H=44, n=candles.length;
+    if(!n) return "";
+    let hi=-Infinity, lo=Infinity;
+    for(const c of candles){ hi=Math.max(hi,c[2]); lo=Math.min(lo,c[3]); }
+    const span = (hi-lo) || 1;
+    const y = v => 3 + (hi-v)/span*(H-6);
+    const slot = W/n, bw = Math.min(10, slot*0.62);
+    let s = "";
+    candles.forEach((c,i)=>{
+      const [,o,h,l,cl] = c;
+      const x = slot*i + slot/2;
+      const col = cl>o ? "var(--up)" : (cl<o ? "var(--down)" : "var(--doji)");
+      const top = y(Math.max(o,cl)), bot = y(Math.min(o,cl));
+      s += `<line x1="${x}" y1="${y(h)}" x2="${x}" y2="${y(l)}" stroke="${col}" stroke-width="1.2"/>`;
+      s += `<rect x="${x-bw/2}" y="${top}" width="${bw}" height="${Math.max(1.4, bot-top)}" fill="${col}" rx="1"/>`;
+    });
+    return `<svg class="candles" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${s}</svg>`;
+  }
+
+  function card(r){
+    const chgCls = r.chg > 0 ? "up" : (r.chg < 0 ? "down" : "flat");
+    const chgTxt = (r.chg > 0 ? "+" : "") + r.chg.toFixed(2) + "%";
+    const ma = r.aboveMa20 ? '<span class="chip ma">20일선 위</span>' : "";
+    const body = r.d0Body != null ? ` · 첫 양봉 +${r.d0Body}%` : "";
+    const mktNm = r.mkt === "KOSPI" ? "코스피" : "코스닥";
+    const rank = r.rank ? ` ${r.rank}위` : "";
+    return `<div class="card">
+      <div class="ident">
+        <a class="nm" href="https://m.stock.naver.com/domestic/stock/${r.ticker}/total" target="_blank" rel="noopener">${r.name}</a>
+        <span class="code mono">${r.ticker}</span>
+        <span class="chip">${mktNm}${rank}</span>${ma}
+      </div>
+      <div class="price num">
+        <span class="close">${fmtWon(r.close)}</span>
+        <span class="chg ${chgCls}">${chgTxt}</span>
+      </div>
+      <div class="sub">
+        ${candleSVG(r.candles || [])}
+        <span class="foot num">시총 ${fmtCap(r.mcap)} · 5일평균 ${fmtVol(r.avgVol5)}${body}</span>
+      </div>
+    </div>`;
+  }
+
+  function renderList(el, list){
+    const maOnly = $("maOnly").checked;
+    const rows = (list || []).filter(r =>
+      (!maOnly || r.aboveMa20) && (mktFilter === "ALL" || r.mkt === mktFilter));
+    el.innerHTML = rows.length ? rows.map(card).join("")
+      : `<div class="empty">해당 종목 없음</div>`;
+    return rows.length;
+  }
+
+  function render(){
+    if(!cur) return;
+    const d = cur;
+    $("loading").hidden = true; $("app").hidden = false;
+    $("dateLabel").textContent = fmtDate(d.date);
+    $("prevBtn").disabled = idx >= dates.length - 1;
+    $("nextBtn").disabled = idx <= 0;
+    const inMkt = list => (list || []).filter(r => mktFilter === "ALL" || r.mkt === mktFilter).length;
+    $("cntA").textContent = inMkt(d.A);
+    $("cntN").textContent = inMkt(d.A_near);
+    $("cntB").textContent = inMkt(d.B);
+    const upd = d.updatedAt ? new Date(d.updatedAt) : null;
+    $("metaLine").textContent =
+      `검사 ${d.checked?.toLocaleString("ko-KR")} / 전체 ${d.universe?.toLocaleString("ko-KR")}종목` +
+      (upd ? ` · ${upd.getMonth()+1}/${upd.getDate()} ${String(upd.getHours()).padStart(2,"0")}:${String(upd.getMinutes()).padStart(2,"0")} 갱신` : "");
+    $("cA").textContent = renderList($("secA"), d.A) + "건";
+    $("cN").textContent = renderList($("secN"), d.A_near) + "건";
+    $("cB").textContent = renderList($("secB"), d.B) + "건";
+  }
+
+  async function loadDate(i){
+    const date = dates[i];
+    if(!date) return;
+    if(cache.has(date)){ cur = cache.get(date); idx = i; render(); return; }
+    try{
+      const res = await fetch(`data/rising3_${date}.json`, {cache:"no-cache"});
+      if(!res.ok) throw new Error(res.status);
+      const doc = await res.json();
+      cache.set(date, doc); cur = doc; idx = i; render();
+    }catch(e){
+      const u = $("unavail"); u.hidden = false;
+      u.textContent = "데이터를 불러오지 못했습니다. 네트워크 확인 후 다시 열어 주세요.";
+    }
+  }
+
+  $("prevBtn").addEventListener("click", ()=>{ if(idx < dates.length-1) loadDate(idx+1); });
+  $("nextBtn").addEventListener("click", ()=>{ if(idx > 0) loadDate(idx-1); });
+  $("maOnly").addEventListener("change", render);
+  document.querySelectorAll(".seg button").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      mktFilter = b.dataset.mkt;
+      document.querySelectorAll(".seg button").forEach(x=>x.setAttribute("aria-pressed", String(x===b)));
+      render();
+    });
+  });
+
+  try{
+    const res = await fetch("data/index.json", {cache:"no-cache"});
+    if(!res.ok) throw new Error(res.status);
+    const doc = await res.json();
+    dates = (doc.dates || []).slice().sort().reverse();
+    if(!dates.length){
+      $("loading").textContent = "아직 스크리닝 데이터가 없습니다. 평일 장 마감 후 채워집니다.";
+      return;
+    }
+    await loadDate(0);
+  }catch(e){
+    $("loading").hidden = true;
+    const u = $("unavail"); u.hidden = false;
+    u.textContent = "데이터를 불러오지 못했습니다. 네트워크 확인 후 다시 열어 주세요.";
+  }
+})();
+</script>
+</body>
+</html>
